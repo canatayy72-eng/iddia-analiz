@@ -34,7 +34,7 @@ def son_maclari_getir(team_id):
 st.title("⚽ SofaScore AI Analiz")
 st.markdown("Takım ID girerek son maç verilerine dayalı **Poisson Analizi** yapın.")
 
-# Takım ID Girişi
+# Takım ID Girişi (Örn: 38 Manchester City)
 team_id = st.text_input("Analiz edilecek Takım ID:", "38")
 
 if st.button("📊 Analizi Başlat"):
@@ -79,7 +79,7 @@ if st.button("📊 Analizi Başlat"):
     else:
         st.error("Veri çekilemedi. API anahtarın bitmiş olabilir veya ID yanlış.")
 
-# --- HAFIZA SİSTEMİ (Hizalama Hatası Burada Düzeltildi) ---
+# --- HAFIZA SİSTEMİ ---
 if 'notlar' not in st.session_state:
     st.session_state.notlar = []
 
