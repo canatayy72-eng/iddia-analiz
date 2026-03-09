@@ -21,7 +21,7 @@ if 'hafiza' not in st.session_state:
 st.title("⚽ Pro Analiz & Hafıza")
 st.markdown("Veriler **Poisson Dağılımı** ile hesaplanmaktadır.")
 
-# Örnek Maç Verileri
+# API Bağlanana Kadar Örnek Maç Verileri
 mac_verisi = {
     "Fenerbahçe - Galatasaray": {"ev_xg": 1.8, "dep_xg": 1.4},
     "Real Madrid - Barcelona": {"ev_xg": 2.1, "dep_xg": 1.9},
@@ -41,7 +41,7 @@ if secilen_mac:
     st.info(f"**Maç:** {secilen_mac} | **xG Beklentisi:** {ev_xg} - {dep_xg}")
     
     c1, c2 = st.columns(2)
-    # 2.5 Üst Olasılığı (0, 1 ve 2 gollü tüm skorları çıkarıyoruz)
+    # 2.5 Üst Olasılığı
     alt_skorlar = (matris[0,0] + matris[0,1] + matris[0,2] + 
                    matris[1,0] + matris[1,1] + matris[2,0])
     ust_25 = (1 - alt_skorlar) * 100
@@ -59,7 +59,7 @@ if secilen_mac:
     df_map.columns = [f"D {i}" for i in range(4)]
     df_map.index = [f"E {i}" for i in range(4)]
     
-    # Tabloyu yüzde olarak ve temiz bir görünümle göster
+    # Tabloyu yüzde olarak göster
     st.dataframe(df_map.style.format("{:.1%}"), use_container_width=True)
 
     # 3. Hafıza Bölümü
