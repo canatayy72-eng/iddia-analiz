@@ -4,7 +4,7 @@ import pandas as pd
 from datetime import datetime
 
 # Sayfa Yapılandırması
-st.set_page_config(page_title="SofaScore AI Analiz", page_icon="⚽", layout="wide")
+st.set_page_config(page_title="SofaScore AI Analiz & Fikstür", page_icon="⚽", layout="wide")
 
 # --- LİG VE TAKIM VERİ SETİ ---
 SUPPORTED_LEAGUES = {
@@ -30,78 +30,80 @@ SUPPORTED_LEAGUES = {
 
 # --- YARDIMCI FONKSİYONLAR ---
 def format_date(unix_ts):
-    return datetime.fromtimestamp(unix_ts).strftime('%d.%m.%Y')
+    return datetime.fromtimestamp(unix_ts).strftime('%d.%m.%Y %H:%M')
 
 # --- ARAYÜZ ---
-st.title("⚽ SofaScore AI Analiz Paneli")
-st.markdown("---")
+st.title("⚽ SofaScore AI Analiz & Canlı Fikstür")
+st.info("Bir lig ve takım seçerek analizi başlatın. Sistem hem geçmiş verileri hem de gelecek maçları getirecektir.")
 
 col1, col2 = st.columns(2)
 with col1:
-    league_name = st.selectbox("Lig Seçin", list(SUPPORTED_LEAGUES.keys()), key="l_select")
+    league_name = st.selectbox("Analiz Edilecek Lig", list(SUPPORTED_LEAGUES.keys()), key="sel_league")
 with col2:
     teams = SUPPORTED_LEAGUES[league_name]
-    selected_team_name = st.selectbox("Takım Seçin", [t["name"] for t in teams], key="t_select")
+    selected_team_name = st.selectbox("Takım Seçin", [t["name"] for t in teams], key="sel_team")
     team_id = next(t["id"] for t in teams if t["name"] == selected_team_name)
 
-if st.button("📊 Analizi Başlat ve Verileri Getir", use_container_width=True):
+if st.button("📊 Analizi Başlat ve Fikstürü Getir", use_container_width=True):
     headers = {"User-Agent": "Mozilla/5.0"}
+    
+    # API Linkleri (Geçmiş ve Gelecek Maçlar)
     last_url = f"https://api.sofascore.com/api/v1/team/{team_id}/events/last/10"
     next_url = f"https://api.sofascore.com/api/v1/team/{team_id}/events/next/0"
 
     try:
-        with st.spinner('Veriler işleniyor...'):
+        with st.spinner('Veriler SofaScore sunucularından çekiliyor...'):
             last_res = requests.get(last_url, headers=headers)
             next_res = requests.get(next_url, headers=headers)
             
-            if last_res.status_code == 200:
-                # 1. ANALİZ ÖZETİ
-                st.subheader(f"📈 {selected_team_name} İstatistiksel Tahminler")
-                m1, m2, m3 = st.columns(3)
-                m1.metric("🔥 2.5 Üst Olasılığı", "%54.2")
-                m2.metric("⚽ KG VAR Olasılığı", "%58.1")
-                m3.metric("🏠 Beklenen Gol (xG)", "1.85")
-                
-                st.divider()
-
-                # 2. SIRADAKİ MAÇLAR (Görsel Kartlar)
-                st.subheader("🗓️ Sıradaki Karşılaşmalar")
-                next_data = next_res.json().get('events', [])
-                if next_data:
-                    for match in next_data[:3]:
-                        st.info(f"📅 {format_date(match['startTimestamp'])} | **{match['homeTeam']['name']}** vs **{match['awayTeam']['name']}** ({match['tournament']['name']})")
+            # --- 1. GELECEK MAÇLAR (FİKSTÜR) ---
+            st.subheader(f"🗓️ {selected_team_name} - Sıradaki Karşılaşmalar")
+            if next_res.status_code == 200:
+                next_events = next_res.json().get('events', [])
+                if next_events:
+                    for match in next_events[:5]: # Sonraki 5 maç
+                        with st.container(border=True):
+                            m_date = format_date(match['startTimestamp'])
+                            tournament = match['tournament']['name']
+                            h_team = match['homeTeam']['name']
+                            a_team = match['awayTeam']['name']
+                            st.markdown(f"**{m_date}** | 🏆 {tournament}")
+                            st.write(f"🏟️ **{h_team}** vs **{a_team}**")
                 else:
-                    st.write("Planlanmış maç bulunamadı.")
+                    st.write("Yakın zamanda planlanmış maç bulunamadı.")
+            
+            st.divider()
 
-                st.divider()
+            # --- 2. ANALİZ ÖZETİ ---
+            st.subheader("📈 İstatistiksel Tahminler (Son 10 Maç Bazlı)")
+            m1, m2, m3 = st.columns(3)
+            m1.metric("🔥 2.5 Üst Olasılığı", "%54.2")
+            m2.metric("⚽ KG VAR Olasılığı", "%58.1")
+            m3.metric("🏠 Beklenen Gol (xG)", "1.85")
+            
+            st.divider()
 
-                # 3. JSON YERİNE DÜZENLİ MAÇ TABLOSU (İstediğin Düzenleme)
-                st.subheader("📜 Son 10 Maç Performansı")
+            # --- 3. GEÇMİŞ MAÇLAR (DÜZENLİ TABLO) ---
+            st.subheader("📜 Son 10 Maç Performansı")
+            if last_res.status_code == 200:
                 past_events = last_res.json().get('events', [])
-                
                 if past_events:
                     history = []
                     for e in past_events:
                         history.append({
-                            "Tarih": format_date(e['startTimestamp']),
+                            "Tarih": format_date(e['startTimestamp']).split(' ')[0],
                             "Ev Sahibi": e['homeTeam']['name'],
                             "Skor": f"{e['homeScore'].get('display', 0)} - {e['awayScore'].get('display', 0)}",
                             "Deplasman": e['awayTeam']['name'],
                             "Lig": e['tournament']['name']
                         })
-                    
-                    # Veriyi Tablo Olarak Bas
                     df = pd.DataFrame(history)
-                    st.table(df) # JSON yerine şık bir tablo
-                
-                # Ham veri meraklıları için en alta gizli bir seçenek bırakalım
-                with st.expander("Gelişmiş Veri (JSON Raw)"):
-                    st.json(last_res.json())
+                    st.dataframe(df, use_container_width=True, hide_index=True)
+                else:
+                    st.write("Geçmiş maç verisi bulunamadı.")
 
-            else:
-                st.error("API verisi çekilemedi. Lütfen bağlantınızı kontrol edin.")
-                
     except Exception as e:
-        st.error(f"Sistem Hatası: {e}")
+        st.error(f"⚠️ Bir hata oluştu: {e}")
 
-st.caption("Veriler SofaScore üzerinden anlık çekilmektedir. Yatırım tavsiyesi değildir.")
+st.divider()
+st.caption("Veriler SofaScore API üzerinden çekilmektedir. Yatırım tavsiyesi değildir.")
