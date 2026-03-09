@@ -42,38 +42,51 @@ if st.button("📊 Analizi Başlat"):
         maclar = son_maclari_getir(team_id)
     
     if maclar:
-        # Son 5 maçın gollerinden xG tahmini üretme
         ev_skorlar = []
         dep_skorlar = []
         
-        for m in maclar[:10]: # Son 10 maçı tara
+        for m in maclar[:10]:
             if 'homeScore' in m and 'awayScore' in m:
                 ev_skorlar.append(m['homeScore'].get('current', 0))
                 dep_skorlar.append(m['awayScore'].get('current', 0))
         
-        # Ortalama gol beklentisi (xG) hesapla
         ev_xg = sum(ev_skorlar) / len(ev_skorlar) if ev_skorlar else 1.5
         dep_xg = sum(dep_skorlar) / len(dep_skorlar) if dep_skorlar else 1.2
         
         matris = poisson_analiz(ev_xg, dep_xg)
         
-        # --- SONUÇ PANELİ ---
         st.success(f"Analiz Tamamlandı! (Son {len(ev_skorlar)} maç baz alındı)")
         
         col1, col2 = st.columns(2)
         
-        # 2.5 Üst Hesaplama
         alt_olasilik = (matris[0,0] + matris[0,1] + matris[0,2] + 
                         matris[1,0] + matris[1,1] + matris[2,0])
         ust_25 = (1 - alt_olasilik) * 100
         
-        # KG VAR Hesaplama
         kg_yok = matris[0,:].sum() + matris[:,0].sum() - matris[0,0]
         kg_var = (1 - kg_yok) * 100
         
         col1.metric("🔥 2.5 Üst İhtimali", f"%{round(ust_25, 1)}")
         col2.metric("⚽ KG VAR İhtimali", f"%{round(kg_var, 1)}")
         
-        # Skor Tablosu
         st.write("### 📊 Olası Skor Dağılımı (%)")
-        df_skor = pd.DataFrame(matris[:4
+        
+        # --- BURADAKİ HATAYI DÜZELTTİK ---
+        df_skor = pd.DataFrame(matris[:4, :4], 
+                              columns=[f"D{i}" for i in range(4)], 
+                              index=[f"E{i}" for i in range(4)])
+        
+        st.dataframe(df_skor.style.format("{:.1%}"), use_container_width=True)
+        
+        st.info(f"💡 Tahmini xG Değerleri: Ev: {round(ev_xg,2)} | Dep: {round(dep_xg,2)}")
+
+    else:
+        st.error("Veri çekilemedi. API anahtarın bitmiş olabilir veya ID yanlış.")
+
+# --- HAFIZA ---
+if 'notlar' not in st.session_state:
+    st.session_state.notlar = []
+
+st.divider()
+yeni_not = st.text_input("📌 Maç hakkında not al:")
+if st.button("Hafızaya Ekle"):
