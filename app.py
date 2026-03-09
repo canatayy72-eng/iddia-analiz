@@ -34,7 +34,7 @@ def son_maclari_getir(team_id):
 st.title("⚽ SofaScore AI Analiz")
 st.markdown("Takım ID girerek son maç verilerine dayalı **Poisson Analizi** yapın.")
 
-# Takım ID Girişi (Örn: 38 Manchester City, 602 Fenerbahçe)
+# Takım ID Girişi
 team_id = st.text_input("Analiz edilecek Takım ID:", "38")
 
 if st.button("📊 Analizi Başlat"):
@@ -70,23 +70,30 @@ if st.button("📊 Analizi Başlat"):
         col2.metric("⚽ KG VAR İhtimali", f"%{round(kg_var, 1)}")
         
         st.write("### 📊 Olası Skor Dağılımı (%)")
-        
-        # --- BURADAKİ HATAYI DÜZELTTİK ---
         df_skor = pd.DataFrame(matris[:4, :4], 
                               columns=[f"D{i}" for i in range(4)], 
                               index=[f"E{i}" for i in range(4)])
-        
         st.dataframe(df_skor.style.format("{:.1%}"), use_container_width=True)
         
         st.info(f"💡 Tahmini xG Değerleri: Ev: {round(ev_xg,2)} | Dep: {round(dep_xg,2)}")
-
     else:
         st.error("Veri çekilemedi. API anahtarın bitmiş olabilir veya ID yanlış.")
 
-# --- HAFIZA ---
+# --- HAFIZA SİSTEMİ (Hizalama Hatası Burada Düzeltildi) ---
 if 'notlar' not in st.session_state:
     st.session_state.notlar = []
 
 st.divider()
 yeni_not = st.text_input("📌 Maç hakkında not al:")
+
 if st.button("Hafızaya Ekle"):
+    if yeni_not:
+        st.session_state.notlar.append(yeni_not)
+        st.toast("Not kaydedildi!")
+    else:
+        st.warning("Lütfen bir not yazın.")
+
+if st.session_state.notlar:
+    st.write("**Kayıtlı Notların:**")
+    for n in reversed(st.session_state.notlar):
+        st.info(n)
